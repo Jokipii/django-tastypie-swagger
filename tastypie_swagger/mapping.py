@@ -260,6 +260,7 @@ class ResourceSwaggerMapping(object):
 
     def build_extra_operation(self, extra_action):
         return {
+            'summary': extra_actions.get('summary'),
             'httpMethod': extra_action['http_method'].upper(),
             'parameters': self.build_parameters_from_extra_action(method=extra_action.get('http_method'), fields=extra_action.get('fields')),
             'responseClass': 'Object', #TODO this should be extended to allow the creation of a custom object.
