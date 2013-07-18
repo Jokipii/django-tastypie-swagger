@@ -228,6 +228,9 @@ class ResourceSwaggerMapping(object):
         if method.upper() == 'GET':
             parameters.append(self.build_parameter(paramType='path', name=self._detail_uri_name(), dataType='int', description='ID of resource'))
         for name, field in fields.items():
+            for parameter in parameters:
+                if parameter.get('name') == name:
+                    parameters.remove(parameter)
             parameters.append(self.build_parameter(
                 paramType=field.get('paramType', 'query'),
                 name=name,
