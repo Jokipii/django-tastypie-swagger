@@ -6,8 +6,17 @@ from django.http import HttpResponse, Http404
 from django.core.exceptions import ImproperlyConfigured
 from django.core.urlresolvers import reverse
 from django.conf import settings
+from django.utils.functional import Promise
+from django.utils.encoding import force_text
 
 from .mapping import ResourceSwaggerMapping
+
+#  https://docs.djangoproject.com/en/dev/topics/serialization/#id2
+class LazyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Promise):
+            return force_text(obj)
+        return super(LazyEncoder, self).default(obj)
 
 
 class TastypieApiMixin(object):
@@ -69,7 +78,7 @@ class JSONView(TemplateView):
         if 'view' in context:
             del context['view']
         return self.response_class(
-            json.dumps(context),
+            json.dumps(context, cls=LazyEncoder),
             content_type='application/json',
             **response_kwargs
         )
