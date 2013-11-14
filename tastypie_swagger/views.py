@@ -66,6 +66,8 @@ class JSONView(TemplateView):
         for k in ['params','view']:
             if k in context:
                 del context[k]
+        if 'view' in context:
+            del context['view']
         return self.response_class(
             json.dumps(context),
             content_type='application/json',
