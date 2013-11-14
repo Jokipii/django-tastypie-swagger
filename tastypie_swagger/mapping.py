@@ -40,6 +40,7 @@ class ResourceSwaggerMapping(object):
         'post-list': "Create a new %s",
         'put-detail': "Update an existing %s",
         'delete-detail': "Delete an existing %s",
+        'patch-detail': "Partialy update an existing %s",
     }
 
     def __init__(self, resource):
@@ -232,8 +233,11 @@ class ResourceSwaggerMapping(object):
         if method.upper() == 'GET':
             parameters.append(self.build_parameter(paramType='path', name=self._detail_uri_name(), dataType='int', description='ID of resource'))
         for name, field in fields.items():
+            for parameter in parameters:
+                if parameter.get('name') == name:
+                    parameters.remove(parameter)
             parameters.append(self.build_parameter(
-                paramType="query",
+                paramType=field.get('paramType', 'query'),
                 name=name,
                 dataType=field['type'],
                 required=field['required'],
@@ -280,6 +284,7 @@ class ResourceSwaggerMapping(object):
 
     def build_extra_operation(self, extra_action):
         return {
+            'summary': extra_action.get('summary'),
             'httpMethod': extra_action['http_method'].upper(),
             'parameters': self.build_parameters_from_extra_action(method=extra_action.get('http_method'), fields=extra_action.get('fields')),
             'responseClass': 'Object', #TODO this should be extended to allow the creation of a custom object.
@@ -298,6 +303,11 @@ class ResourceSwaggerMapping(object):
         if 'put' in self.schema['allowed_detail_http_methods']:
             operation = self.build_detail_operation(method='put')
             operation['parameters'].append(self.build_parameter_for_object(method='put'))
+            detail_api['operations'].append(operation)
+
+        if 'patch' in self.schema['allowed_detail_http_methods']:
+            operation = self.build_detail_operation(method='patch')
+            operation['parameters'].append(self.build_parameter_for_object(method='patch'))
             detail_api['operations'].append(operation)
 
         if 'delete' in self.schema['allowed_detail_http_methods']:
@@ -368,8 +378,8 @@ class ResourceSwaggerMapping(object):
         properties = {}
 
         for name, field in self.schema['fields'].items():
-            # Exclude fields from custom put / post object definition
-            if method in ['post','put']:
+            # Exclude fields from custom put / post / patch object definition
+            if method in ['post','put', 'patch']:
                 if name in self.WRITE_ACTION_IGNORED_FIELDS:
                     continue
                 if field.get('readonly'):
