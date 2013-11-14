@@ -9,7 +9,7 @@ except ImportError:
 
 from tastypie import fields
 
-from .utils import trailing_slash_or_none, urljoin_forced
+from .utils import trailing_slash_or_none, urljoin_forced, is_sequence
 
 
 # Ignored POST fields
@@ -96,7 +96,7 @@ class ResourceSwaggerMapping(object):
 #            parameter.update({'allowableValues': allowed_values})
         return parameter
 
-    def build_parameters_from_fields(self):   
+    def build_parameters_from_fields(self):
         parameters = []
         for name, field in self.schema['fields'].items():
             # Ignore readonly fields
@@ -181,7 +181,7 @@ class ResourceSwaggerMapping(object):
                         related_mapping = ResourceSwaggerMapping(related_resource)
                         parameters.extend(related_mapping.build_parameters_from_filters(prefix="%s%s__" % (prefix, name)))
 
-                if isinstance( field, list ):
+                elif is_sequence(field):
                     # Skip if this is an incorrect filter
                     if name not in self.schema['fields']: continue
 
