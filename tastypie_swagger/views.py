@@ -96,6 +96,12 @@ class SwaggerView(TastypieApiMixin, TemplateView):
 
     template_name = 'tastypie_swagger/index.html'
 
+    def get_context_data(self, **kwargs):
+        context = super(SwaggerView, self).get_context_data(**kwargs)
+        url = reverse('%s:resources' % resolve(self.request.path).namespace)
+        context['discovery_url'] = self.request.build_absolute_uri(url).strip('/')
+        return context
+
 
 class ResourcesView(TastypieApiMixin, SwaggerApiDataMixin, JSONView):
     """
