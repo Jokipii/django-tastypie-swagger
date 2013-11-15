@@ -4,7 +4,7 @@ import json
 from django.views.generic import TemplateView
 from django.http import HttpResponse, Http404
 from django.core.exceptions import ImproperlyConfigured
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse, resolve
 from django.conf import settings
 from django.utils.functional import Promise
 from django.utils.encoding import force_text
@@ -91,11 +91,6 @@ class SwaggerView(TastypieApiMixin, TemplateView):
 
     template_name = 'tastypie_swagger/index.html'
 
-    def get_context_data(self, **kwargs):
-        context = super(SwaggerView, self).get_context_data(**kwargs)
-        context['discovery_url'] = reverse('%s:resources' % self.kwargs.get('namespace'))
-        return context
-
 
 class ResourcesView(TastypieApiMixin, SwaggerApiDataMixin, JSONView):
     """
@@ -110,7 +105,8 @@ class ResourcesView(TastypieApiMixin, SwaggerApiDataMixin, JSONView):
         # Construct schema endpoints from resources
         apis = [{'path': '/%s' % name} for name in sorted(self.tastypie_api._registry.keys())]
         context.update({
-            'basePath': self.request.build_absolute_uri(reverse('%s:schema' % self.kwargs.get('namespace'))).strip('/'),            'apis': apis,
+            'basePath': self.request.build_absolute_uri(reverse('%s:schema' % resolve(self.request.path).namespace)).strip('/'),
+            'apis': apis,
         })
         return context
 
