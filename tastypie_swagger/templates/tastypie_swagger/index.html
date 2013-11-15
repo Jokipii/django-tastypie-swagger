@@ -22,7 +22,6 @@
       window.swaggerUi = new SwaggerUi({
       url:"{{ discovery_url }}",
       dom_id: "swagger-ui-container",
-      supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
       onComplete: function(swaggerApi, swaggerUi){
         $("img[src$='throbber.gif']").attr("src", "{{ STATIC_URL }}tastypie_swagger/images/throbber.gif");
         if(console) {
