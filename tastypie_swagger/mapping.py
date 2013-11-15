@@ -331,11 +331,6 @@ class ResourceSwaggerMapping(object):
         if 'delete' in self.schema['allowed_detail_http_methods']:
             detail_api['operations'].append(self.build_detail_operation(method='delete'))
 
-        if 'patch' in self.schema['allowed_detail_http_methods']:
-            operation = self.build_detail_operation(method='patch')
-            operation['parameters'].append(self.build_parameter_for_object(method='patch'))
-            detail_api['operations'].append(operation)
-
         return detail_api
 
     def build_list_api(self):
