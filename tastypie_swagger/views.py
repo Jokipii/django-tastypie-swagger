@@ -5,11 +5,11 @@ from django.views.generic import TemplateView
 from django.http import HttpResponse, Http404
 from django.core.exceptions import ImproperlyConfigured
 from django.core.urlresolvers import reverse, resolve
-from django.conf import settings
 from django.utils.functional import Promise
 from django.utils.encoding import force_text
 
 from .mapping import ResourceSwaggerMapping
+
 
 #  https://docs.djangoproject.com/en/dev/topics/serialization/#id2
 class LazyEncoder(json.JSONEncoder):
@@ -34,18 +34,23 @@ class TastypieApiMixin(object):
 
             tastypie_api_module = self.kwargs.get('tastypie_api_module', None)
             if not tastypie_api_module:
-                raise ImproperlyConfigured("tastypie_api_module must be defined as an extra parameters in urls.py with its value being a path to a tastypie.api.Api instance.")
+                raise ImproperlyConfigured(
+                    "tastypie_api_module must be defined"
+                    + "as an extra parameters in urls.py with its value being"
+                    + "a path to a tastypie.api.Api instance.")
             path, attr = tastypie_api_module.rsplit('.', 1)
             try:
                 tastypie_api = getattr(sys.modules[path], attr, None)
             except KeyError:
                 raise ImproperlyConfigured("%s is not a valid python path" % path)
             if not tastypie_api:
-                raise ImproperlyConfigured("%s is not a valid tastypie.api.Api instance" % tastypie_api_module)
+                message = "%s is not a valid tastypie.api.Api instance" % tastypie_api_module
+                raise ImproperlyConfigured(message)
 
             self._tastypie_api = tastypie_api
 
         return self._tastypie_api
+
 
 class SwaggerApiDataMixin(object):
     """
@@ -72,7 +77,7 @@ class JSONView(TemplateView):
         """
         Returns a response with a template rendered with the given context.
         """
-        for k in ['params','view']:
+        for k in ['params', 'view']:
             if k in context:
                 del context[k]
         if 'view' in context:
@@ -104,8 +109,9 @@ class ResourcesView(TastypieApiMixin, SwaggerApiDataMixin, JSONView):
 
         # Construct schema endpoints from resources
         apis = [{'path': '/%s' % name} for name in sorted(self.tastypie_api._registry.keys())]
+        url = reverse('%s:schema' % resolve(self.request.path).namespace)
         context.update({
-            'basePath': self.request.build_absolute_uri(reverse('%s:schema' % resolve(self.request.path).namespace)).strip('/'),
+            'basePath': self.request.build_absolute_uri(url).strip('/'),
             'apis': apis,
         })
         return context
