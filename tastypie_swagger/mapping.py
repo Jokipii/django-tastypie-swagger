@@ -1,5 +1,4 @@
 import datetime
-from django.core.urlresolvers import reverse
 from django.db.models.sql.constants import QUERY_TERMS
 
 try:
@@ -16,11 +15,11 @@ from .utils import trailing_slash_or_none, urljoin_forced, is_sequence
 IGNORED_FIELDS = ['id', ]
 
 
-
 # Enable all basic ORM filters but do not allow filtering across relationships.
 ALL = 1
 # Enable all ORM filters, including across relationships
 ALL_WITH_RELATIONS = 2
+
 
 class ResourceSwaggerMapping(object):
     """
@@ -31,7 +30,7 @@ class ResourceSwaggerMapping(object):
     http://django-tastypie.readthedocs.org/en/latest/resources.html
     https://github.com/wordnik/swagger-core/wiki/API-Declaration
     """
-    WRITE_ACTION_IGNORED_FIELDS = ['id', 'resource_uri',]
+    WRITE_ACTION_IGNORED_FIELDS = ['id', 'resource_uri']
 
     # Default summary strings for operations
     OPERATION_SUMMARIES = {
@@ -82,7 +81,7 @@ class ResourceSwaggerMapping(object):
         else:
             raise AttributeError('Resource %(resource)s has neither get_resource_list_uri nor get_resource_uri' % {'resource': self.resource})
 
-    def build_parameter(self, paramType='body', name='', dataType='', required=True, description='', allowed_values = None):
+    def build_parameter(self, paramType='body', name='', dataType='', required=True, description='', allowed_values=None):
         parameter = {
             'paramType': paramType,
             'name': name,
@@ -120,7 +119,7 @@ class ResourceSwaggerMapping(object):
 
     def build_parameters_from_ordering(self):
         values = []
-        [values.extend([field,"-%s"%field]) for field in self.schema['ordering']]
+        [values.extend([field, "-%s" % field]) for field in self.schema['ordering']]
         return {
             'paramType': "query",
             'name': "order_by",
@@ -128,7 +127,7 @@ class ResourceSwaggerMapping(object):
             'required': False,
             'description': unicode("Orders the result set based on the selection. Ascending order by default, prepending the '-' sign change the sorting order to descending"),
             'allowableValues': {
-                'valueType' : "LIST",
+                'valueType': "LIST",
                 'values': values
 
             }
@@ -141,8 +140,8 @@ class ResourceSwaggerMapping(object):
         # Always add the limits & offset params on the root ( aka not prefixed ) object.
         if not prefix and method.upper() == 'GET':
             navigation_filters = [
-                ('limit','int','Specify the number of element to display per page.'),
-                ('offset','int','Specify the offset to start displaying element on a page.'),
+                ('limit', 'int', 'Specify the number of element to display per page.'),
+                ('offset', 'int', 'Specify the offset to start displaying element on a page.'),
             ]
             for name, type, desc in navigation_filters:
                 parameters.append(self.build_parameter(
@@ -156,7 +155,8 @@ class ResourceSwaggerMapping(object):
             for name, field in self.schema['filtering'].items():
                 # Integer value means this points to a related model
                 if field in [ALL, ALL_WITH_RELATIONS]:
-                    if field == ALL: #TODO: Show all possible ORM filters for this field
+                    if field == ALL:
+                        #TODO: Show all possible ORM filters for this field
                         #This code has been mostly sucked from the tastypie lib
                         if getattr(self.resource._meta, 'queryset', None) is not None:
                             # Get the possible query terms from the current QuerySet.
@@ -174,17 +174,20 @@ class ResourceSwaggerMapping(object):
                                 # Django 1.5+.
                                 field = QUERY_TERMS
 
-                    elif field == ALL_WITH_RELATIONS: # Show all params from related model
+                    elif field == ALL_WITH_RELATIONS:
+                        # Show all params from related model
                         # Add a subset of filter only foreign-key compatible on the relation itself.
                         # We assume foreign keys are only int based.
-                        field = ['gt','in','gte', 'lt', 'lte','exact'] # TODO This could be extended by checking the actual type of the relational field, but afaik it's also an issue on tastypie.
+                        field = ['gt', 'in', 'gte', 'lt', 'lte', 'exact']
+                        # TODO This could be extended by checking the actual type of the relational field, but afaik it's also an issue on tastypie.
                         related_resource = self.resource.fields[name].get_related_resource(None)
                         related_mapping = ResourceSwaggerMapping(related_resource)
                         parameters.extend(related_mapping.build_parameters_from_filters(prefix="%s%s__" % (prefix, name)))
 
                 elif is_sequence(field):
                     # Skip if this is an incorrect filter
-                    if name not in self.schema['fields']: continue
+                    if name not in self.schema['fields']:
+                        continue
 
                     schema_field = self.schema['fields'][name]
                     for query in field:
@@ -201,7 +204,7 @@ class ResourceSwaggerMapping(object):
                                 paramType="query",
                                 name="%s%s" % (prefix, name),
                                 dataType=dataType,
-                                required= False,
+                                required=False,
                                 description=description,
                             ))
                         else:
@@ -209,7 +212,7 @@ class ResourceSwaggerMapping(object):
                                 paramType="query",
                                 name="%s%s__%s" % (prefix, name, query),
                                 dataType=schema_field['type'],
-                                required= False,
+                                required=False,
                                 description=force_text(schema_field['help_text']),
                             ))
 
@@ -219,7 +222,7 @@ class ResourceSwaggerMapping(object):
         return self.build_parameter(
             name=self.resource_name,
             dataType="%s_%s" % (self.resource_name, method) if not method == "get" else self.resource_name,
-            required= True
+            required=True
         )
 
     def _detail_uri_name(self):
@@ -231,7 +234,12 @@ class ResourceSwaggerMapping(object):
     def build_parameters_from_extra_action(self, method, fields):
         parameters = []
         if method.upper() == 'GET':
-            parameters.append(self.build_parameter(paramType='path', name=self._detail_uri_name(), dataType='int', description='ID of resource'))
+            parameters.append(self.build_parameter(
+                paramType='path',
+                name=self._detail_uri_name(),
+                dataType='int',
+                description='ID of resource'
+            ))
         for name, field in fields.items():
             for parameter in parameters:
                 if parameter.get('name') == name:
@@ -251,21 +259,24 @@ class ResourceSwaggerMapping(object):
         if hasattr(self.resource.Meta, 'custom_filtering'):
             for name, field in self.resource.Meta.custom_filtering.items():
                 parameters.append(self.build_parameter(
-                        paramType = 'query',
-                        name = name,
-                        dataType = field['dataType'],
-                        required = field['required'],
-                        description = unicode(field['description'])
-                        ))
-
-
+                    paramType='query',
+                    name=name,
+                    dataType=field['dataType'],
+                    required=field['required'],
+                    description=unicode(field['description'])
+                ))
         return parameters
 
     def build_detail_operation(self, method='get'):
         operation = {
             'summary': self.get_operation_summary(detail=True, method=method),
             'httpMethod': method.upper(),
-            'parameters': [self.build_parameter(paramType='path', name=self._detail_uri_name(), dataType='int', description='ID of resource')],
+            'parameters': [self.build_parameter(
+                paramType='path',
+                name=self._detail_uri_name(),
+                dataType='int',
+                description='ID of resource'
+            )],
             'responseClass': self.resource_name,
             'nickname': '%s-detail' % self.resource_name,
             'notes': self.resource.__doc__,
@@ -286,14 +297,21 @@ class ResourceSwaggerMapping(object):
         return {
             'summary': extra_action.get('summary'),
             'httpMethod': extra_action['http_method'].upper(),
-            'parameters': self.build_parameters_from_extra_action(method=extra_action.get('http_method'), fields=extra_action.get('fields')),
-            'responseClass': 'Object', #TODO this should be extended to allow the creation of a custom object.
+            'parameters': self.build_parameters_from_extra_action(
+                method=extra_action.get('http_method'),
+                fields=extra_action.get('fields')
+            ),
+            #TODO this should be extended to allow the creation of a custom object.
+            'responseClass': 'Object',
             'nickname': extra_action['name'],
         }
 
     def build_detail_api(self):
         detail_api = {
-            'path': urljoin_forced(self.get_resource_base_uri(), '{%s}%s' % (self._detail_uri_name(), trailing_slash_or_none())),
+            'path': urljoin_forced(
+                self.get_resource_base_uri(),
+                '{%s}%s' % (self._detail_uri_name(), trailing_slash_or_none())
+            ),
             'operations': [],
         }
 
@@ -317,7 +335,6 @@ class ResourceSwaggerMapping(object):
             operation = self.build_detail_operation(method='patch')
             operation['parameters'].append(self.build_parameter_for_object(method='patch'))
             detail_api['operations'].append(operation)
-
 
         return detail_api
 
@@ -348,7 +365,11 @@ class ResourceSwaggerMapping(object):
             identifier = self._detail_uri_name()
             for extra_action in self.resource._meta.extra_actions:
                 extra_api = {
-                    'path': "%s{%s}/%s/" % (self.get_resource_base_uri(), identifier , extra_action.get('name')),
+                    'path': "%s{%s}/%s/" % (
+                        self.get_resource_base_uri(),
+                        identifier,
+                        extra_action.get('name')
+                    ),
                     'operations': []
                 }
                 operation = self.build_extra_operation(extra_action)
@@ -379,7 +400,7 @@ class ResourceSwaggerMapping(object):
 
         for name, field in self.schema['fields'].items():
             # Exclude fields from custom put / post / patch object definition
-            if method in ['post','put', 'patch']:
+            if method in ['post', 'put', 'patch']:
                 if name in self.WRITE_ACTION_IGNORED_FIELDS:
                     continue
                 if field.get('readonly'):
@@ -390,7 +411,8 @@ class ResourceSwaggerMapping(object):
             elif isinstance(field.get('default'), datetime.datetime):
                 field['default'] = field.get('default').isoformat()
 
-            properties.update(self.build_property(
+            properties.update(
+                self.build_property(
                     name,
                     field.get('type'),
                     # note: 'help_text' is a Django proxy which must be wrapped
@@ -408,26 +430,25 @@ class ResourceSwaggerMapping(object):
             }
         }
 
-
     def build_list_models_and_properties(self):
         models = {}
 
         # Build properties added by list view in the meta section by tastypie
         meta_properties = {}
         meta_properties.update(
-            self.build_property('limit','int', 'Specify the number of element to display per page.')
+            self.build_property('limit', 'int', 'Specify the number of element to display per page.')
         )
         meta_properties.update(
-            self.build_property('next','string', 'Uri of the next page relative to the current page settings.')
+            self.build_property('next', 'string', 'Uri of the next page relative to the current page settings.')
         )
         meta_properties.update(
-            self.build_property('offset','int', 'Specify the offset to start displaying element on a page.')
+            self.build_property('offset', 'int', 'Specify the offset to start displaying element on a page.')
         )
         meta_properties.update(
-            self.build_property('previous','string', 'Uri of the previous page relative to the current page settings.')
+            self.build_property('previous', 'string', 'Uri of the previous page relative to the current page settings.')
         )
         meta_properties.update(
-            self.build_property('total_count','int', 'Total items count for the all collection')
+            self.build_property('total_count', 'int', 'Total items count for the all collection')
         )
 
         models.update(
